@@ -248,7 +248,7 @@ const ContentDetail = ({ isDarkMode }) => {
                       </td>
                     </tr>
                     <tr>
-                      <td className="border border-gray-300 p-2">Blockchain in Finance</td>
+                      <td className="border border-gray-300 p-2">CyberSecurity in Finance</td>
                       <td className="border border-gray-300 p-2">Sarah, Lee</td>
                       <td className="border border-gray-300 p-2">
                         <button
