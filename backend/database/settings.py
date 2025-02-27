@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'api',
     'rest_framework',
     'corsheaders',
+    'knox',
 ]
 
 MIDDLEWARE = [
@@ -55,9 +56,12 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost",
+    "http://localhost:5173",
 ]
 
+AUTHENTICATION_BACKENDS = [
+    'api.auth_backend.UserAuthBackend'
+]
 
 ROOT_URLCONF = 'database.urls'
 
@@ -78,6 +82,10 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'database.wsgi.application'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': ('knox.auth.TokenAuthentication',),
+}
 
 
 # Database

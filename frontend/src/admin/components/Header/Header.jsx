@@ -29,12 +29,7 @@ const Header = ({ onToggleDarkMode, isDarkMode }) => {
           <span className="absolute top-0 right-0 w-3 h-3 bg-[#fc7247] rounded-full"></span>
         </button>
 
-        {/* Cart */}
-        <button className="relative">
-          <FaShoppingCart className={`text-xl ${isDarkMode ? 'text-white' : 'text-[#121138]'}`} />
-          <span className="absolute top-0 right-0 w-3 h-3 bg-[#5cc800] rounded-full"></span>
-        </button>
-
+  
         {/* Dark Mode Toggle */}
         <button className={`text-xl ${isDarkMode ? 'text-white' : 'text-[#121138]'}`} onClick={onToggleDarkMode}>
           <FaSun />

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { assets } from '../../assets/assets'; // Import your assets
+import AxiosInstance from '../../../AxiosInstance';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -12,59 +13,56 @@ const Login = () => {
 
   const navigate = useNavigate();
 
-  // const handleUsernameChange = (e) => {
-  //   const value = e.target.value;
-  //   if (/^\d{0,8}$/.test(value)) {
-  //     setUsername(value);
-  //   }
-  // };
-
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
 
-  // const isPasswordValid = (password) => {
-  //   const minLength = 8;
-  //   const uppercase = /[A-Z]/;
-  //   const number = /[0-9]/;
-  //   const specialChar = /[!@#$%^&*(),.?":{}|<>]/;
-
-  //   if (password.length < minLength) {
-  //     toast.error('Password must be at least 8 characters long.');
-  //     return false;
+  // const handleLogin = () => {
+  //   if (username.length === '') {
+  //     toast.error('Username cannot be empty!');
+  //     return;
   //   }
-  //   if (!uppercase.test(password)) {
-  //     toast.error('Password must contain at least one uppercase letter.');
-  //     return false;
+  //   if (password === '') {
+  //     toast.error('Password cannot be empty!');
+  //     return;
   //   }
-  //   if (!number.test(password)) {
-  //     toast.error('Password must contain at least one number.');
-  //     return false;
-  //   }
-  //   if (!specialChar.test(password)) {
-  //     toast.error('Password must contain at least one special character.');
-  //     return false;
-  //   }
-  //   return true;
+  //   toast.success('Logged in successfully!');
   // };
 
   const handleLogin = () => {
-    if (username.length !== 8) {
-      toast.error('Username must be 8 digits!');
+    // Validation
+    if (username.length === '') {
+      toast.error('Username cannot be empty!');
       return;
     }
+
     if (password === '') {
       toast.error('Password cannot be empty!');
       return;
     }
-    // if (!isPasswordValid(password)) {
-    //   return;
-    // }
+  
+    // API request
+    AxiosInstance.post(`login/`, {
+      username: username,
+      password: password,
+    })
+      .then((response) => {
+        console.log(response);
+        localStorage.setItem('Token', response.data.token);
+        // toast.success('Logged in successfully!');
+        if (response.data.role === "student") {
+          navigate(`/dashboard`);
+        } else if (response.data.role === "teacher") {
+          navigate(`/home`);
+        } else {
+          alert("Role not recognized. Contact admin.");
+        }
 
-    toast.success('Logged in successfully!');
-    setTimeout(() => {
-      navigate('/home');
-    }, 1500);
+      })
+      .catch((error) => {
+        // toast.error('Error during login! Please check your credentials.');
+        console.error('Error during login:', error);
+      });
   };
 
   return (
@@ -76,13 +74,14 @@ const Login = () => {
       }}
     >
       <div
-        className="w-full max-w-lg bg-white shadow-xl rounded-lg px-8 py-3 transform transition-all duration-700 ease-out animate__animated animate__fadeInUp"
+        className="w-full max-w-lg bg-white shadow-xl rounded-lg px-8 py-4 transform transition-all duration-700 ease-out animate__animated animate__fadeInUp"
       >
         <h1 className="text-3xl font-bold text-center mb-6 text-gray-800 animate__animated animate__fadeIn animate__delay-1s">
           Login
         </h1>
         <div className="space-y-6">
           {/* Username Input */}
+          {/* <form onSubmit={handleLogin}> */}
           <div>
             <label
               htmlFor="username"
@@ -95,6 +94,7 @@ const Login = () => {
               id="username"
               value={username}
               // onChange={handleUsernameChange}
+              onChange={(e) => setUsername(e.target.value)}
               placeholder="Enter your username"
               maxLength="8"
               className="mt-2 w-full px-4 py-3 text-lg border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
@@ -105,7 +105,7 @@ const Login = () => {
           <div>
             <label
               htmlFor="password"
-              className="block text-lg font-medium text-gray-700"
+              className="block text-lg font-medium text-gray-700 mt-2"
             >
               Password
             </label>
@@ -128,7 +128,7 @@ const Login = () => {
           </div>
 
           {/* Remember Me and Forgot Password */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between my-3">
             <div className="flex items-center">
               <input
                 type="checkbox"
@@ -159,6 +159,7 @@ const Login = () => {
           >
             Login
           </button>
+          {/* </form> */}
         </div>
       </div>
 
