@@ -31,12 +31,12 @@ const Login = () => {
 
   const handleLogin = () => {
     // Validation
-    if (username.length === '') {
+    if (username.trim() === '') {
       toast.error('Username cannot be empty!');
       return;
     }
 
-    if (password === '') {
+    if (password.trim() === '') {
       toast.error('Password cannot be empty!');
       return;
     }
@@ -60,11 +60,18 @@ const Login = () => {
 
       })
       .catch((error) => {
-        // toast.error('Error during login! Please check your credentials.');
-        console.error('Error during login:', error);
+        // toast.error('Error during login:', error.response.data.error);
+        if (error.response && error.response.status === 401) {
+              toast.error('Invalid credentials');
+            } else {
+              toast.error('Error during login! Please check your credentials.');
+            }
+            console.error('Error during login:', error);
       });
+    
+    
   };
-
+  
   return (
     <div
       className="min-h-screen bg-cover bg-center flex items-center justify-center transition-all duration-500 pt-20"
@@ -96,7 +103,6 @@ const Login = () => {
               // onChange={handleUsernameChange}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Enter your username"
-              maxLength="8"
               className="mt-2 w-full px-4 py-3 text-lg border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
             />
           </div>

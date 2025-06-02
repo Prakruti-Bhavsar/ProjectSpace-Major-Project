@@ -4,6 +4,7 @@ import { TbWorldWww } from "react-icons/tb";
 import { motion } from "framer-motion";
 
 const Footer = () => {
+  
   return (
     <footer className="py-28 bg-[#f7f7f7]">
       <motion.div

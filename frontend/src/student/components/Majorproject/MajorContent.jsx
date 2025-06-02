@@ -1,10 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-
+import AxiosInstance from "../../../AxiosInstance";
 
 const MajorProjectPopup = () => {
   const navigate = useNavigate();
 
+  const [username, setUsername] = useState("");
+
+  useEffect(() => {
+    AxiosInstance.get("/user/user-info/")
+      .then((response) => {
+        setUsername(response.data.username);
+      })
+      .catch(() => {
+        setUsername("Guest");
+      });
+  }, []);
+
+  const [formActive, setFormActive] = useState(false);
+  const [projectExists, setProjectExists] = useState(false);
+  const [project, setProject] = useState(null);
+
+  
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
 
@@ -12,8 +29,30 @@ const MajorProjectPopup = () => {
   const [groupDetails, setGroupDetails] = useState({
     leaderId: '',
     leaderName: '',
+    div:'',
     members: Array(3).fill({ name: '', id: '' }),
   });
+
+  useEffect(() => {
+    const fetchProjectStatus = async () => {
+      try {
+        const response = await AxiosInstance.get('/projects/status-project/?sem=1'); // Adjust the URL to match your API
+
+        if (response.data.status) {
+          // If status is true, visibility is allowed, check for project data
+          setFormActive(true);   
+        } 
+        if (response.data.project) {
+          setProjectExists(true);
+          setProject(response.data.project); // Store project data
+        }
+      } catch (error) {
+        console.error('Error fetching project status:', error);
+      }
+    };
+    fetchProjectStatus();
+  },[]);
+
 
   // State for domain preferences and teachers
   const [selectedDomain, setSelectedDomain] = useState(['', '', '']);
@@ -25,25 +64,92 @@ const MajorProjectPopup = () => {
     { domain: '', preference1: '', preference2: '', preference3: '' }
   ]);
 
-  // Predefined teacher data
-  const teachers = {
-    "Cybersecurity": ['Prof. Snehal Patil', 'Prof. Vinay Bhave'],
-    "AI-ML": ['Prof. Shankar Jadhav', 'Prof. Neha Kotak'],
-    "Cloud Computing": ['Prof. Kiran Rao', 'Prof. Snehal Patil'],
-    "Big Data": ['Prof. Vinay Bhave', 'Prof. Shankar Jadhav'],
-    "Networking": ['Prof. Shankar Jadhav', 'Prof. Vinay Bhave','Prof. Kiran Rao'],
-    "Blockchain":['Prof. Snehal Patil','Prof. Neha Kotak'],
-    "DevOps":['Prof. Shankar Jadhav','Prof. Kiran Rao'],
-    "IoT":['Prof. Neha Kotak',],
-  };
+  const [teachers, setTeacherPreferences] = useState({});
 
+  const validateStep = () => {
+    if (currentStep === 1) {
+      const { leaderId, leaderName, div, members } = groupDetails;
+  
+      if (!leaderId.trim() || !leaderName.trim() || !div.trim()) {
+        alert("Team Leader ID, Name, and Division are required.");
+        return false;
+      }
+  
+      const validMembers = members.filter(m => m.name.trim() && m.id.trim());
+      if (validMembers.length < 2) {
+        alert("At least 2 team members with name and Moodle ID are required.");
+        return false;
+      }
+      
+      const moodleIds = [leaderId.trim(), ...members.map(m => m.id.trim())];
+      const uniqueIds = new Set(moodleIds);
+      if (uniqueIds.size !== moodleIds.length) {
+        alert("All Moodle IDs (leader and members) must be unique.");
+        return false;
+      }
+
+      // Check if at least one Moodle ID matches the logged-in user's Moodle ID
+      const userMatch = moodleIds.some(id => id === username.trim()); // Ensure username is also trimmed
+      if (!userMatch) {
+        alert("At least one Moodle ID should match your own login ID.");
+        return false;
+      }
+    }
+  
+    if ([2, 3, 4].includes(currentStep)) {
+      const index = currentStep - 2;
+    
+      const domain = selectedDomain[index];
+      if (!domain) {
+        alert(`Please select a domain for Preference ${index + 1}`);
+        return false;
+      }
+    
+      const teacher1 = document.querySelector(`input[name="teacher1_${currentStep - 1}"]:checked`)?.value || '';
+      const teacher2 = document.querySelector(`input[name="teacher2_${currentStep - 1}"]:checked`)?.value || '';
+      const teacher3 = document.querySelector(`input[name="teacher3_${currentStep - 1}"]:checked`)?.value || '';
+
+      // if (!teacher1 || !teacher2 || !teacher3) {
+      //   alert("Please select all three teacher preferences.");
+      //   return false;
+      // }
+    
+      const teachers = [teacher1, teacher2, teacher3];
+      
+      // Create a set from the non-empty teachers list
+      const teacherSet = new Set(teachers.filter(Boolean));
+    
+      // If the size of the set is not equal to the number of non-empty teacher values, it means there are duplicates
+      if (teacherSet.size !== teachers.filter(Boolean).length) {
+        alert("Teacher preferences within a domain must be unique.");
+        return false;
+      }
+    }
+  
+    return true;
+  };
+  
+  const validateFinalSubmission = () => {
+    const allDomains = preferences.map(p => p.domain);
+    const domainSet = new Set(allDomains);
+    if (domainSet.size !== preferences.length) {
+      alert("All domain preferences must be different.");
+      return false;
+    }
+    return true;
+  };
   // Handle opening and closing the popup
   const handlePopup = () => {
+    AxiosInstance.get("/teacherpreferences/get_preferences/") // Assuming ViewSet is registered in `urls.py`
+      .then(response => setTeacherPreferences(response.data))
+      .catch(error => console.error("Failed to fetch teacher preferences", error));
+
     setIsPopupOpen(!isPopupOpen);
   };
 
   // Handle moving to the next step or submitting
   const handleNextStep = () => {
+    if (!validateStep()) return;
     if (currentStep < 4) {
       // Save current preferences before moving to the next step
       const updatedPreferences = [...preferences];
@@ -59,6 +165,7 @@ const MajorProjectPopup = () => {
       setPreferences(updatedPreferences);
       setCurrentStep(currentStep + 1);
     } else {
+      if (!validateFinalSubmission()) return;
       const updatedPreferences = [...preferences];
       const currentPreferenceIndex = currentStep - 2; // Index for current step preferences
 
@@ -74,22 +181,24 @@ const MajorProjectPopup = () => {
       const payload = {
         leaderId: groupDetails.leaderId,
         leaderName: groupDetails.leaderName,
+        div: groupDetails.div,
         members: groupDetails.members,
         preferences,
       };
 
       console.log('Payload to submit:', payload);
       submitGroupData(payload);
-      handlePopup();
     }
   };
 
   const submitGroupData = async (payload) => {
     try {
-      const response = await api.post('/groups/gourp_preferences/', payload);
-      console.log('Group saved successfully:', response.data.message);
+      const response = await AxiosInstance.post('/projectpreference/save_project/', {payload:payload});
+      alert(`Group saved successfully: ${response.data.message}`);
+      setIsPopupOpen(false)
     } catch (error) {
-      console.error('Error saving group:', error);
+      const errorMessage = error.response?.data?.error || 'An unexpected error occurred while saving the group.';
+      alert(`Error saving group: ${errorMessage}`);
     }
   };
 
@@ -115,14 +224,8 @@ const MajorProjectPopup = () => {
     <div className="w-full p-4 dark:bg-gray-600 dark:text-gray-500 rounded-lg">
       <div className="flex justify-between items-center mb-4 p-3 rounded-md border-2 border-green-500 bg-[#DFF0D8]">
         <h2 className="text-2xl font-bold text-[#3C763D]">Major Projects</h2>
-        <button
-          onClick={handlePopup}
-          className="w-10 h-10 bg-green-700 text-white text-2xl rounded-full font-bold transition shadow-md hover:scale-105 flex items-center justify-center"
-        >
-          +
-        </button>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 ">
+      {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 ">
         <div className="bg-[#62d0f3] p-4 rounded-lg relative hover:shadow-md cursor-pointer">
           <h3 className="text-lg font-bold text-center text-blue-600">Project Space</h3>
           <p className="mt-1 text-white font-semibold text-center">A comprehensive web framework to manage academic projects by using genetic algorithm and machine learning</p>
@@ -130,11 +233,63 @@ const MajorProjectPopup = () => {
             View all
           </button>
         </div>
+      </div> */}
+
+      {/* {username === "21104067" || username === "21104057" ? (
+        <div className="bg-[#62d0f3] p-4 rounded-lg relative hover:shadow-md cursor-pointer">
+          <h3 className="text-lg font-bold text-center text-blue-600">Project Space</h3>
+          <p className="mt-1 text-white font-semibold text-center">
+            A comprehensive web framework to manage academic projects by using genetic algorithm and machine learning
+          </p>
+          <button
+            className="absolute bottom-1 right-1 bg-blue-500 text-white px-1 py-1 rounded hover:bg-blue-700 transition text-sm hover:scale-105 font-bold"
+            onClick={() => navigate("/major_project")}
+          >
+            View all
+          </button>
+        </div>
+      ) : (
+        <div className="bg-gray-200 p-4 rounded-lg text-center">
+          <h3 className="text-lg font-bold text-gray-700">Provide Your Group Details</h3>
+          <p className="mt-1 text-gray-600">Fill in your project preferences to proceed.</p>
+          <button
+            className="mt-2 bg-green-500 text-white px-3 py-2 rounded hover:bg-green-700 transition font-bold"
+            onClick={handlePopup}
+          >
+            Open Form
+          </button>
+        </div>
+      )} */}
+
+{projectExists ? (
+      <div className="bg-[#62d0f3] p-4 rounded-lg relative hover:shadow-md cursor-pointer">
+        <h3 className="text-lg font-bold text-center text-blue-600">{project.div}{project.id}</h3>
+        {/* <p className="mt-1 text-white font-semibold text-center">
+          A comprehensive web framework to manage academic projects by using genetic algorithm and machine learning
+        </p> */}
+        <button
+          className="absolute bottom-1 right-1 bg-blue-500 text-white px-1 py-1 rounded hover:bg-blue-700 transition text-sm hover:scale-105 font-bold"
+          onClick={() => navigate(`/major_project/${project.id}`)}
+        >
+          View
+        </button>
       </div>
+    ) : formActive ? (
+      <div className="bg-gray-200 p-4 rounded-lg text-center">
+        <h3 className="text-lg font-bold text-gray-700">Provide Your Group Details</h3>
+        <p className="mt-1 text-gray-600">Fill in your project preferences to proceed.</p>
+        <button
+          className="mt-2 bg-green-500 text-white px-3 py-2 rounded hover:bg-green-700 transition font-bold"
+          onClick={handlePopup}
+        >
+          Open Form
+        </button>
+      </div>
+    ) : null}
 
       {isPopupOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg mt-1 w-3/4 md:w-1/3">
+          <div className="bg-white p-6 rounded-lg shadow-lg mt-1 w-3/4 md:w-1/3 max-h-[80vh] overflow-y-auto">
             <div className="space-y-4">
               {currentStep === 1 && (
                 <div>
@@ -150,6 +305,7 @@ const MajorProjectPopup = () => {
                         onChange={(e) =>
                           setGroupDetails({ ...groupDetails, leaderId: e.target.value })
                         }
+                        required
                       />
                     </div>
                     <div className="flex flex-col">
@@ -161,6 +317,19 @@ const MajorProjectPopup = () => {
                         onChange={(e) =>
                           setGroupDetails({ ...groupDetails, leaderName: e.target.value })
                         }
+                        required
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <label className="mb-1 text-sm">Division</label>
+                      <input
+                        type="text"
+                        className="border p-1 rounded"  
+                        value={groupDetails.div}
+                        onChange={(e) =>
+                          setGroupDetails({ ...groupDetails, div: e.target.value })
+                        }
+                        required       
                       />
                     </div>
                     <h3 className="text-lg font-bold mt-4">Team Members</h3>
@@ -174,9 +343,10 @@ const MajorProjectPopup = () => {
                               className="border p-1 rounded"
                               value={member.id}
                               onChange={(e) => {
-                                const members = [...groupDetails.members];
-                                members[index].id = e.target.value;
-                                setGroupDetails({ ...groupDetails, members });
+                                const updatedMembers = groupDetails.members.map((m, i) =>
+                                  i === index ? { ...m, id: e.target.value } : m
+                                );
+                                setGroupDetails({ ...groupDetails, members: updatedMembers });
                               }}
                             />
                           </div>
@@ -187,9 +357,10 @@ const MajorProjectPopup = () => {
                               className="border p-1 rounded"
                               value={member.name}
                               onChange={(e) => {
-                                const members = [...groupDetails.members];
-                                members[index].name = e.target.value;
-                                setGroupDetails({ ...groupDetails, members });
+                                const updatedMembers = groupDetails.members.map((m, i) =>
+              i === index ? { ...m, name: e.target.value } : m
+            );
+            setGroupDetails({ ...groupDetails, members: updatedMembers });
                               }}
                             />
                           </div>

@@ -5,12 +5,12 @@ import Main from '../ui/main';
 import Content from '../ui/content';
 import Calendar from '../components/Schedule/Calendar';
 import Cl_Today from '../components/Schedule/Cl_Today';
-
+import useInactivityLogout from '../../useInactivityLogout'
 
 const SToday = () => {
   const [darkMode, setDarkMode] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
+  useInactivityLogout();
   const toggleDarkMode=()=>{
     setDarkMode(!darkMode);
   };

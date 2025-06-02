@@ -4,12 +4,12 @@ import Sidebar from '../components/Sidebar/Sidebar';
 import Shealth from '../components/Miniproject_details/Shealth';
 import Main from '../ui/main';
 import Content from '../ui/content';
-
+import useInactivityLogout from '../../useInactivityLogout'
 
 const SHealthmeta = () => {
   const [darkMode, setDarkMode] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
+  useInactivityLogout();
   const toggleDarkMode=()=>{
     setDarkMode(!darkMode);
   };

@@ -4,12 +4,12 @@ import Sidebar from '../components/Sidebar/Sidebar';
 import Sbmi from '../components/Miniproject_details/Sbmi';
 import Main from '../ui/main';
 import Content from '../ui/content';
-
+import useInactivityLogout from '../../useInactivityLogout'
 
 const SBMI = () => {
   const [darkMode, setDarkMode] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
+  useInactivityLogout();
   const toggleDarkMode=()=>{
     setDarkMode(!darkMode);
   };

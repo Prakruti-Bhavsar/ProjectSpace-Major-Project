@@ -8,7 +8,6 @@ const Profile = () => {
     justify-between gap-4 shadow-md">
         <User />
         <Calendar />
-        <Upcoming_Events />
     </div>
   )
 }

@@ -1,12 +1,102 @@
-import { useState } from "react";
+import React,{ useState, useEffect } from "react";
 import { FaChevronRight, FaChevronDown } from "react-icons/fa";
+import AxiosInstance from "../../../AxiosInstance";
 
-const Profile = () => {
+const Profile = ({ isSidebarOpen, isMobile }) => {
   const [openSections, setOpenSections] = useState({});
   const [allExpanded, setAllExpanded] = useState(false);
   const [tags, setTags] = useState([]);
+  const [profileData, setProfileData] = useState(null); // State to hold profile data
 
-  const sections = ["General", "User picture", "Interests", "Optional"];
+  const [generalForm, setGeneralForm] = useState({
+    first_name: "",
+    middle_name: "",
+    last_name: "",
+    email: ""
+  });
+
+  const [passwordForm, setPasswordForm] = useState({
+    current_password: "",
+    new_password: "",
+    confirm_password: ""
+  });
+
+  const sections = ["General", "Optional", "Password Update"];
+
+  // Function to fetch student profile data
+  const fetchProfileData = async () => {
+      try {
+        const response = await AxiosInstance.get('/student-profile/');  // Adjust API endpoint based on your Django URL
+        setProfileData(response.data); 
+        console.log(response.data);
+      } catch (error) {
+        console.error("Error fetching student profile data:", error);
+      }
+    };
+  useEffect(() => {
+    fetchProfileData();
+  }, []);
+
+  useEffect(() => {
+    if(profileData){
+      setGeneralForm({
+            first_name: profileData.first_name,
+            middle_name: profileData.middle_name || "",
+            last_name: profileData.last_name,
+            email: profileData.email
+          });
+    }
+  }, [profileData]);
+
+  const handleGeneralChange = (e) => {
+    setGeneralForm({ ...generalForm, [e.target.name]: e.target.value });
+  };
+
+  const handlePasswordChange = (e) => {
+    setPasswordForm({ ...passwordForm, [e.target.name]: e.target.value });
+  };
+
+  const handleGeneralSubmit = async () => {
+    try {
+      await AxiosInstance.patch('/student-profile/update-profile/', generalForm);
+      alert("Profile updated successfully!");
+    } catch (err) {
+      alert("Failed to update profile.");
+    }
+  };
+
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+
+    const { current_password, new_password, confirm_password } = passwordForm;
+    if (new_password !== confirm_password) return alert("Passwords do not match");
+
+     if (!passwordRegex.test(new_password)) {
+      alert("Password does not meet constraints.");
+      return;
+    }
+
+    try {
+      await AxiosInstance.post('/student-profile/update_password/', {
+        current_password,
+        new_password
+      });
+      setPasswordForm({
+          current_password: "",
+          new_password: "",
+          confirm_password: ""
+      })
+      alert("Password updated successfully!");
+    } catch (err) {
+      setPasswordForm({
+          current_password: "",
+          new_password: "",
+          confirm_password: ""
+      })
+      alert(err.response.data.error || "Error updating the password");
+    }
+  };
 
   const toggleSection = (index) => {
     setOpenSections((prev) => ({
@@ -14,6 +104,7 @@ const Profile = () => {
       [index]: !prev[index],
     }));
   };
+
 
   const toggleAll = () => {
     const newState = !allExpanded;
@@ -35,131 +126,131 @@ const Profile = () => {
   const removeTag = (tagToRemove) => {
     setTags((prevTags) => prevTags.filter((tag) => tag !== tagToRemove));
   };
+  
+  if (!profileData) return <div>Loading...</div>; // Handle loading state
+
 
   return (
-    <div className="mt-2 p-6 bg-white shadow-lg rounded-lg w-1200 ml-64  dark:bg-gray-700 dark:text-gray-200">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold">PAYAL GUPTA</h2>
-        <button className="bg-[#5cc800] text-white font-semibold hover:border-green-500 px-4 py-2 rounded" onClick={toggleAll}>
-          {allExpanded ? "Collapse All" : "Expand All"}
+    <div
+  className={`
+    mt-2 p-2 md:p-6 bg-white shadow-lg rounded-lg w-full
+    dark:bg-gray-800 dark:border-gray-600 dark:text-white
+    transition-all duration-300
+    ${!isMobile ? 'md:ml-64 w-auto' : isSidebarOpen ? 'ml-64 w-auto' : 'ml-0 w-full'}
+  `}
+>
+  <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-2">
+    <h2 className="text-xl md:text-2xl font-bold text-center md:text-left">
+      {`${profileData.first_name} ${profileData.last_name}`}
+    </h2>
+    <button
+      className="bg-[#5cc800] text-white font-semibold hover:border-green-500 px-3 md:px-4 py-2 rounded"
+      onClick={toggleAll}
+    >
+      {allExpanded ? "Collapse All" : "Expand All"}
+    </button>
+  </div>
+  <div>
+    {sections.map((section, index) => (
+      <div key={index} className="border-b py-2">
+        <button
+          className="flex justify-between items-center w-full text-base md:text-lg font-semibold"
+          onClick={() => toggleSection(index)}
+        >
+          {section}
+          {openSections[index] ? (
+            <FaChevronDown className="text-gray-600 dark:text-gray-200" />
+          ) : (
+            <FaChevronRight className="text-gray-600 dark:text-gray-200" />
+          )}
         </button>
-      </div>
-      <div>
-        {sections.map((section, index) => (
-          <div key={index} className="border-b py-2">
-            <button
-              className="flex justify-between items-center w-full text-lg font-semibold"
-              onClick={() => toggleSection(index)}
-            >
-              {section}
-              {openSections[index] ? (
-                <FaChevronDown className="text-gray-600 dark:text-gray-200" />
-              ) : (
-                <FaChevronRight className="text-gray-600 dark:text-gray-200" />
-              )}
-            </button>
-            {openSections[index] && (
-              <div className="p-3 bg-gray-100 rounded-md mt-2 text-gray-700  dark:bg-gray-700 dark:text-gray-200">
-                {section === "General" ? (
-                  <div className="space-y-4">
-                    {[
-                      { label: "First Name", type: "text", placeholder: "Enter first name" },
-                      { label: "Last Name", type: "text", placeholder: "Enter last name" },
-                      { label: "Email Address", type: "email", value: "payalgupta264@apsit.edu.com" },
-                      { label: "City", type: "text", value: "Thane" },
-                      {
-                        label: "Country",
-                        type: "select",
-                        options: ["India", "US", "UK", "Canada"],
-                      },
-                      {
-                        label: "Time Zone",
-                        type: "select",
-                        options: ["Asia/Kolkata", "EST", "PST", "IST"],
-                      },
-                      { label: "Description", type: "textarea", placeholder: "Enter description" },
-                    ].map(({ label, type, ...props }, i) => (
-                      <div key={i} className="flex items-center gap-4">
-                        <span className="w-40">{label}</span>
-                        {type === "textarea" ? (
-                          <textarea className="flex-1 p-2 border rounded" {...props}></textarea>
-                        ) : type === "select" ? (
-                          <select className="flex-1 p-2 border rounded">
-                            {props.options.map((option, i) => (
-                              <option key={i}>{option}</option>
-                            ))}
-                          </select>
-                        ) : (
-                          <input className="flex-1 p-2 border rounded" type={type} {...props} />
-                        )}
-                      </div>
-                    ))}
+        {openSections[index] && (
+          <div className="p-2 md:p-3 bg-gray-100 rounded-md mt-2 text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+            {section === "General" ? (
+              <div className="space-y-4">
+                {["first_name", "middle_name", "last_name", "email"].map((field, i) => (
+                  <div
+                    key={i}
+                    className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 mt-2"
+                  >
+                    <span className="w-full md:w-40 capitalize">{field.replace("_", " ")}</span>
+                    <input
+                      type={field === "email" ? "email" : "text"}
+                      name={field}
+                      value={generalForm[field]}
+                      onChange={handleGeneralChange}
+                      className="flex-1 p-2 border rounded text-black"
+                    />
                   </div>
-                ) : section === "User picture" ? (
-                  <div>
-                    <div className="flex items-center gap-4">
-                      <span className="w-40">Current Picture</span>
-                      <span className="italic">None</span>
-                    </div>
-                    <div className="flex items-center gap-4 mt-2">
-                      <span className="w-40">New Picture</span>
-                      <div className="border-dashed border-2 border-gray-300 p-4 rounded-md flex flex-col items-center flex-1">
-                        <span className="text-gray-500">Drag and drop files here to add them.</span>
-                        <input type="file" accept="image/*" className="mt-2 text-sm" />
-                      </div>
-                    </div>
-                  </div>
-                ) : section === "Interests" ? (
-                  <div className="flex items-center gap-4">
-                    <span className="w-40">List of Interests</span>
-                    <div className="flex-1 border p-2 rounded flex flex-wrap gap-2">
-                      {tags.map((tag, i) => (
-                        <div key={i} className="bg-blue-600 text-white px-3 py-1 rounded flex items-center">
-                          {tag}
-                          <button className="ml-2 text-sm text-white" onClick={() => removeTag(tag)}>
-                            &times;
-                          </button>
-                        </div>
-                      ))}
-                      <input
-                        type="text"
-                        placeholder="Enter tags..."
-                        className="border-none outline-none"
-                        onKeyDown={addTag}
-                      />
-                    </div>
-                  </div>
-                ) : section === "Optional" ? (
-                  <div>
-                    {[
-                      { label: "ID Number", type: "text", placeholder: "Enter ID number" },
-                      { label: "Institution", type: "text", value: "APSIT Thane" },
-                      { label: "Department", type: "text", placeholder: "Enter department" },
-                      { label: "Phone", type: "text", placeholder: "Enter phone number" },
-                      { label: "Mobile Phone", type: "text", placeholder: "Enter mobile phone number" },
-                      { label: "Address", type: "textarea", placeholder: "Enter address" },
-                    ].map(({ label, type, ...props }, i) => (
-                      <div key={i} className="flex items-center gap-4 mt-2">
-                        <span className="w-40">{label}</span>
-                        {type === "textarea" ? (
-                          <textarea className="flex-1 p-2 border rounded" {...props}></textarea>
-                        ) : (
-                          <input className="flex-1 p-2 border rounded text-black" type={type} {...props} />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
+                ))}
+                <button
+                  onClick={handleGeneralSubmit}
+                  className="bg-blue-600 text-white px-3 md:px-4 py-2 mt-2 md:mt-4 rounded w-full md:w-auto"
+                >
+                  Update Profile
+                </button>
               </div>
-            )}
+            ) : section === "Optional" ? (
+              <div className="space-y-4">
+                {[
+                  { label: "ID Number", type: "text", placeholder: "Enter ID number", value: profileData.moodleid },
+                  { label: "Institution", type: "text", value: "APSIT Thane" },
+                  { label: "Department", type: "text", placeholder: "Enter department", value: profileData.department },
+                ].map(({ label, type, ...props }, i) => (
+                  <div
+                    key={i}
+                    className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 mt-2"
+                  >
+                    <span className="w-full md:w-40">{label}</span>
+                    <input className="flex-1 p-2 border rounded text-black" type={type} {...props} />
+                  </div>
+                ))}
+              </div>
+            ) : section === "Password Update" ? (
+              <div className="space-y-3">
+                {[
+                  { label: "Current Password", name: "current_password" },
+                  { label: "New Password", name: "new_password" },
+                  { label: "Confirm Password", name: "confirm_password" },
+                ].map(({ label, name }, i) => (
+                  <div
+                    key={i}
+                    className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4"
+                  >
+                    <span className="w-full md:w-40">{label}</span>
+                    <input
+                      type="password"
+                      name={name}
+                      onChange={handlePasswordChange}
+                      className="flex-1 p-2 border rounded"
+                    />
+                  </div>
+                ))}
+                <div className="text-sm text-gray-600 bg-gray-100 p-2 md:p-3 rounded">
+                  <p>Password must contain:</p>
+                  <ul className="list-disc ml-6">
+                    <li>At least 8 characters</li>
+                    <li>At least one uppercase letter</li>
+                    <li>At least one lowercase letter</li>
+                    <li>At least one number</li>
+                    <li>At least one special character</li>
+                  </ul>
+                </div>
+                <button
+                  onClick={handlePasswordSubmit}
+                  className="bg-blue-600 text-white px-3 md:px-4 py-2 mt-2 md:mt-4 rounded w-full md:w-auto"
+                >
+                  Change Password
+                </button>
+              </div>
+            ) : null}
           </div>
-        ))}
+        )}
       </div>
-      <div className="mt-4 flex gap-2">
-        <button className="bg-blue-600 text-white px-4 py-2 rounded">Update profile</button>
-        <button className="bg-[#5cc800] text-white px-4 py-2 rounded">Cancel</button>
-      </div>
-    </div>
+    ))}
+  </div>
+</div>
+
   );
 };
 

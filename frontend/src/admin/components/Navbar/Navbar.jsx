@@ -10,21 +10,21 @@ const NavbarMenu = [
         title: "Home",
         path: "/",
     },
-    {
-        id: 2,
-        title: "Services",
-        path: "#",
-    },
-    {
-        id: 3,
-        title: "About Us",
-        path: "#",
-    },
-    {
-        id: 4,
-        title: "Contact Us",
-        path: "#",
-    },
+    // {
+    //     id: 2,
+    //     title: "Services",
+    //     path: "#",
+    // },
+    // {
+    //     id: 3,
+    //     title: "About Us",
+    //     path: "#",
+    // },
+    // {
+    //     id: 4,
+    //     title: "Contact Us",
+    //     path: "#",
+    // },
 ];
 
 const Navbar = () => {
@@ -48,7 +48,7 @@ const Navbar = () => {
                 {/* Desktop Menu section */}
                 <div className='hidden lg:block'>
                     <ul className='flex items-center gap-5'>
-                        {NavbarMenu.map((menu) => (
+                        {/* {NavbarMenu.map((menu) => (
                             <li key={menu.id}>
                                 <Link
                                     to={menu.path}
@@ -58,7 +58,7 @@ const Navbar = () => {
                                     {menu.title}
                                 </Link>
                             </li>
-                        ))}
+                        ))} */}
                         <button
                             className="primary-btn hover:shadow-lg transform hover:-translate-y-1 transition duration-300"
                             onClick={() => navigate("/login")} // Navigate to login

@@ -2,9 +2,12 @@ import React, { useState } from "react"
 import Sidebar from '../components/Sidebar/Sidebar'
 import Header from '../components/Header/Header'
 import ContentDetail from '../components/ContentDetail/ContentDetail'
+import useInactivityLogout from '../../useInactivityLogout'
+import Footer from "../components/FooterNew/FooterNew"
 
 const Assessment_Detail_Page = () => {
     const [isDarkMode, setIsDarkMode] = useState(false);
+    useInactivityLogout();
 
     const toggleDarkMode = () => {
         setIsDarkMode(!isDarkMode);
@@ -33,7 +36,7 @@ const Assessment_Detail_Page = () => {
 
                 </main>
 
-            
+                <Footer/>            
             </div>
         </div>
         </main>

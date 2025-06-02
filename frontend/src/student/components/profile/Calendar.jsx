@@ -46,18 +46,18 @@ const Notification = () => {
             className="text-sm bg-blue-500 px-2 py-2 rounded-md text-[#ffffff] font-semibold hover:scale-105 transition-shadow"
             onClick={handleUnreadClick}
           >
-            Unread
+            View
           </button>
         </div>
 
         {/* Mark as Read and Clear All */}
-        <div className="flex justify-between text-sm text-gray-500 mb-2">
+        {/* <div className="flex justify-between text-sm text-gray-500 mb-2">
           <span className="text-green-500 hover:underline font-semibold">Today</span>
           <span className="flex gap-2">
             <button className="text-blue-500 hover:underline font-semibold">Mark as read</button>
             <button className="text-red-500 hover:underline font-semibold">Clear all</button>
           </span>
-        </div>
+        </div> */}
 
         {/* Main Notifications List (only two people) */}
         {mainNotifications.map((notification) => (
@@ -82,7 +82,7 @@ const Notification = () => {
         ))}
 
         {/* View Previous Notifications */}
-        <button className="text-blue-500 text-sm hover:underline font-semibold">View previous notifications</button>
+        {/* <button className="text-blue-500 text-sm hover:underline font-semibold">View previous notifications</button> */}
       </div>
 
       {/* Modal */}

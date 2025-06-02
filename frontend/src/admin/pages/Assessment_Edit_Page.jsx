@@ -2,11 +2,11 @@ import React, { useState } from "react"
 import Sidebar from '../components/Sidebar/Sidebar'
 import Header from '../components/Header/Header'
 import EditBtPage from '../components/EditBtPage/EditBtPage'
-
-
+import useInactivityLogout from '../../useInactivityLogout'
+import Footer from "../components/FooterNew/FooterNew"
 const Assessment_Edit_Page = () => {
     const [isDarkMode, setIsDarkMode] = useState(false);
-
+    useInactivityLogout();
     const toggleDarkMode = () => {
         setIsDarkMode(!isDarkMode);
     };
@@ -33,6 +33,7 @@ const Assessment_Edit_Page = () => {
                 <main className="p-6 flex-1">
                 <EditBtPage isDarkMode={isDarkMode} />
                 </main>
+                <Footer/>  
             </div>
         </div>
         </main>

@@ -1,9 +1,24 @@
 import { FaMoon, FaSun } from "react-icons/fa";
 import { HiOutlineMenuAlt2 } from "react-icons/hi";
 import { MdSpaceDashboard } from "react-icons/md";
+import { useState, useEffect } from "react";
+import AxiosInstance from "../../../AxiosInstance";
+import userLogo from "../../assets/user01.png"
 
 const Header = ({ darkMode, toggleDarkMode,
 toggLeSidebar }) => {
+
+    const [username, setUsername] = useState("");
+
+  useEffect(() => {
+    AxiosInstance.get("/user/user-info/")
+      .then((response) => {
+        setUsername(response.data.username);
+      })
+      .catch(() => {
+        setUsername("Guest");
+      });
+  }, []);
   return (
   <nav className="fixed top-0 z-50 w-full bg-[#ffcc82]
   border-b border-gray-200 
@@ -25,7 +40,7 @@ toggLeSidebar }) => {
                 >
                     <HiOutlineMenuAlt2  className="text-2xl"/>
                 </button>
-                <a href="#" className="flex ms-2 md:me-24">
+                <a className="flex ms-2 md:me-24">
                     <MdSpaceDashboard className="h-8 me-3
                     text-3xl text-[#fba02a]"/>
                     <span className="self-center text-2xl font-bold sm:text-3xl whitespace-nowrap
@@ -34,10 +49,22 @@ toggLeSidebar }) => {
                 </a>
                 
             </div>
-            <button className="dark:bg-slate-50 
+            {/* <button className="dark:bg-slate-50 
             dark:text-slate-700 rounded-full p-2 bg-white" onClick={toggleDarkMode}>
                 {darkMode ? <FaSun color="#fba02a"/> : <FaMoon color="#fba02a"/>}
-            </button>
+            </button> */}
+            {/* <div>
+            <p className={`text-sm font-bold text-[#121138]`}>
+              {username}
+            </p>
+          </div> */}
+          <div className="flex gap-3 items-center pr-2 pl-2 pt-1 pb-1 -mt-3 -mb-3">
+                  <img src={userLogo} alt="user image" className="w-8 h-8 rounded-full"/>
+                  <div >
+                      {/* <h3 className="font-semibold text-xl text-white">Payal Gupta</h3> */}
+                      <p className="font-bold font-sm text-black">{username}</p>
+                  </div>
+              </div>
         </div>
     </div>
 
