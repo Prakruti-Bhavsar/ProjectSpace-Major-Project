@@ -16,6 +16,36 @@ const ManagementPage = ({ isDarkMode }) => {
 
   const [teacherdepartments, setTeacherDepartments] = useState([]);
   const [roles, setRoles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [hasAccess, setHasAccess] = useState(false);
+
+  useEffect(() => {
+    AxiosInstance.get('/managementpermission/check-access/')
+      .then(res => {
+        setHasAccess(true);
+      })
+      .catch(err => {
+        if (err.response && err.response.status === 403) {
+          setHasAccess(false);
+        }
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) {
+    return <div className="text-center mt-10">Loading...</div>;
+  }
+
+  if (!hasAccess) {
+    return (
+      <div className="text-center mt-10 text-red-600 font-semibold">
+        Access Restricted: You need special permission to view this section.
+      </div>
+    );
+  }
+
   
   useEffect(() => {
     const fetchStudents = async () => {

@@ -71,6 +71,7 @@ class TeacherPreference(models.Model):
 
     class Meta:
         unique_together = ('teacher', 'preference_rank')  
+        db_table = "TeacherPreference"
 
     def __str__(self):
         return f"{self.teacher.user.username} - {self.domain.name} (Preference {self.preference_rank})"
@@ -156,6 +157,9 @@ class ProjectGuide(models.Model):
     availability = models.IntegerField(default=0)
     max_groups = models.IntegerField(default=0)
 
+    class Meta:
+        db_table = "ProjectGuide"
+
 class Week(models.Model):
     SEMESTER_CHOICES = [
         ('sem_7', 'Semester 7'),
@@ -167,6 +171,9 @@ class Week(models.Model):
     
     def __str__(self):
         return f"Week {self.week_number} - {self.semester}"
+    
+    class Meta:
+        db_table = "week"
 
 class Task(models.Model):
     week = models.ForeignKey(Week, related_name='tasks', on_delete=models.CASCADE)
@@ -175,6 +182,7 @@ class Task(models.Model):
 
     class Meta:
         ordering = ['sequence_number']
+        db_table = "task"
 
 class Publication(models.Model):
     sem = models.ForeignKey(Sem,on_delete=models.CASCADE)
@@ -185,6 +193,9 @@ class Publication(models.Model):
 
     def __str__(self):
         return self.paper_name
+    
+    class Meta:
+        db_table = "Publication"
 
 
 class Copyright(models.Model):
@@ -197,6 +208,9 @@ class Copyright(models.Model):
 
     def __str__(self):
         return self.project_title
+    
+    class Meta:
+        db_table = "Copyright"
 
 
 class Patent(models.Model):
@@ -210,6 +224,9 @@ class Patent(models.Model):
     def __str__(self):
         return self.project_title
     
+    class Meta:
+        db_table = "Patent"
+    
 class AssessmentEvent(models.Model):
     name = models.CharField(max_length=255)
     year = models.ForeignKey(Year, on_delete=models.CASCADE, related_name="events")
@@ -217,6 +234,9 @@ class AssessmentEvent(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.year})"
+    
+    class Meta:
+        db_table = "AssessmentEvent"
 
 class AssessmentPanel(models.Model):
     event = models.ForeignKey(AssessmentEvent, on_delete=models.CASCADE, related_name="panels")
@@ -226,6 +246,9 @@ class AssessmentPanel(models.Model):
 
     def __str__(self):
         return f"Panel {self.panel_number} - {self.event.name}"
+    
+    class Meta:
+        db_table = "AssessmentPanel"
 
 class UnassignedTeacher(models.Model):
     event = models.ForeignKey(AssessmentEvent, on_delete=models.CASCADE, related_name="unassigned_teachers")
@@ -233,6 +256,9 @@ class UnassignedTeacher(models.Model):
 
     def __str__(self):
         return f"{self.teacher.username} - {self.event.name}"
+    
+    class Meta:
+        db_table = "UnassignedTeacher"
 
 
 class UnassignedGroup(models.Model):
@@ -241,6 +267,9 @@ class UnassignedGroup(models.Model):
 
     def __str__(self):
         return f"{self.group.group_id} - {self.event.name}"
+    
+    class Meta:
+        db_table = "UnassignedGroup"
 
 class ProjectTask(models.Model):
     STATUS_CHOICES = [
@@ -257,6 +286,7 @@ class ProjectTask(models.Model):
 
     class Meta:
         unique_together = ('project', 'task')
+        db_table = "ProjectTask"
 
 class ProjectWeekProgress(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
@@ -269,6 +299,7 @@ class ProjectWeekProgress(models.Model):
 
     class Meta:
         unique_together = ('project', 'week')  # One progress per project per week
+        db_table = "ProjectWeekProgress"
 
 class AssessmentRubric(models.Model):
     event = models.ForeignKey(AssessmentEvent, on_delete=models.CASCADE, related_name="rubrics")
@@ -277,6 +308,9 @@ class AssessmentRubric(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.max_marks}) - {self.event.name}"
+    
+    class Meta:
+        db_table = "AssessmentRubric"
 
 class ProjectAssessment(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='project_assessments')
@@ -284,10 +318,16 @@ class ProjectAssessment(models.Model):
     remarks = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        db_table = "ProjectAssessment"
+
 class AssessmentMark(models.Model):
     project_assessment = models.ForeignKey(ProjectAssessment, on_delete=models.CASCADE, related_name='marks')
     rubric = models.ForeignKey(AssessmentRubric, on_delete=models.CASCADE)
     marks = models.PositiveIntegerField()
+
+    class Meta:
+        db_table = "AssessmentMark"
 
 def upload_path(instance, filename):
     year = instance.semester.year.year.replace("/", "-")
@@ -298,6 +338,9 @@ class Resource(models.Model):
     semester = models.ForeignKey(Sem, on_delete=models.CASCADE, related_name='uploads')
     name = models.CharField(max_length=255)
     file = models.FileField(upload_to=upload_path)
+
+    class Meta:
+        db_table = "Resource"
 
     def delete(self, *args, **kwargs):
         if self.file and self.file.name:
@@ -311,6 +354,9 @@ class Link(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.semester})"
+    
+    class Meta:
+        db_table = "Link"
 
 def upload_link_path(instance, filename):
     year = instance.project.sem.year.year.replace("/", "-")
@@ -325,6 +371,12 @@ class LinkUpload(models.Model):
 
     def __str__(self):
         return f"{self.title} ({self.link.name})"
+    
+    class Meta:
+        db_table = "LinkUpload"
 
 class ManagementPermission(models.Model):
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE,null = True,related_name='access')
+
+    class Meta:
+        db_table = "ManagementPermission"

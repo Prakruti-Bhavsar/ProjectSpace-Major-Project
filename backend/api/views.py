@@ -106,12 +106,31 @@ class ManagementPermissionViewSet(viewsets.ModelViewSet):
         if ManagementPermission.objects.filter(teacher_id=teacher_id).exists():
             return Response({"detail": "Access already granted."}, status=400)
         return super().create(request, *args, **kwargs)
+    
+    @action(detail=False, methods=["get"], url_path="check-access")
+    def check_access(self, request):
+        user = request.user
+
+        try:
+            teacher = Teacher.objects.get(user=user)
+        except Teacher.DoesNotExist:
+            return Response({"detail": "Only teachers can access this."}, status=status.HTTP_403_FORBIDDEN)
+
+        has_access = ManagementPermission.objects.filter(teacher=teacher).exists()
+
+        if has_access:
+            return Response({"has_access": True}, status=status.HTTP_200_OK)
+        else:
+            return Response({"detail": "You are not allowed to access this page. You need permission."},
+                            status=status.HTTP_403_FORBIDDEN)
+
 
 class PasswordSetup(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = SetPasswordSerializer
 
     @action(detail=False, methods=['post'], url_path='set-password')
+    @transaction.atomic
     def set_password(self, request):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
@@ -133,6 +152,7 @@ class PasswordSetup(viewsets.ModelViewSet):
 class ClusteringViewSet(viewsets.ModelViewSet):
     serializer_class = SemSerializer
     @action(detail=False, methods=['post'])
+    @transaction.atomic
     def cluster_and_allocate(self, request):
         def group_allocation_major(panel, groups, teachers):
             group_panel_assignment = defaultdict(list)
@@ -4034,7 +4054,7 @@ class TeacherPreferenceViewSet(viewsets.ModelViewSet):
 
             semester = Sem.objects.filter(year=year, sem="Major Project").first()
 
-            cursem = ProjectGuide.objects.get(sem=semester,teacher=teacher)
+            cursem = ProjectGuide.objects.filter(sem=semester, teacher=teacher).first()
 
             if cursem:
                 cursem.form = 1
@@ -4045,6 +4065,7 @@ class TeacherPreferenceViewSet(viewsets.ModelViewSet):
 
 
     @action(detail=False, methods=['get'])
+    @transaction.atomic
     def get_preferences(self, request):
         try:
             # Get logged-in student
@@ -4268,21 +4289,22 @@ class StudentViewSet(viewsets.ModelViewSet):
                         dept = Department.objects.get(name=row["department"])
                         batch = Batch.objects.get(batch=row["batch"], department=dept)
                     except Batch.DoesNotExist:
-                        raise IntegrityError(f"Invalid batch ID: {row['batch']}")  # Forces rollback
+                        raise ValueError(f"Invalid batch ID: {row['batch']}")  # Forces rollback
                     except Department.DoesNotExist:
-                        raise IntegrityError(f"Invalid department: {row['department']}")  # Forces rollback
+                        raise ValueError(f"Invalid department: {row['department']}")  # Forces rollback
 
                     Student.objects.create(user=user, batch=batch, middle_name=row["middlename"])
 
             return Response({"message": "CSV file processed successfully!"}, status=status.HTTP_201_CREATED)
 
-        except IntegrityError as ie:
+        except ValueError as ie:
             return Response({"error": str(ie)}, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
             return Response({"error": f"Processing failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     @action(detail=False, methods=["post"], url_path="register-sem-wise")    
+    @transaction.atomic
     def register_students_in_sem(self, request):
         try:
             category = request.data.get("category") 
@@ -4354,6 +4376,7 @@ class StudentViewSet(viewsets.ModelViewSet):
             return Response({"error": f"Processing failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=False, methods=["post"], url_path="upload-student-file")
+    @transaction.atomic
     def upload_student_file(self, request):
         try:
             # Step 1: Check if a file is uploaded
@@ -4473,6 +4496,7 @@ class StudentSet(viewsets.ModelViewSet):
     serializer_class = StudentSerializer
     permission_classes = [permissions.IsAuthenticated] 
 
+    @transaction.atomic
     def update(self, request, *args, **kwargs):
         student = self.get_object()
         data = request.data.copy()
@@ -4562,6 +4586,7 @@ class TeacherViewSet(viewsets.ModelViewSet):
     serializer_class = TeacherSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    @transaction.atomic
     def update(self, request, *args, **kwargs):
         teacher = self.get_object()
         data = request.data.copy()
@@ -4664,6 +4689,7 @@ class TeacherViewSet(viewsets.ModelViewSet):
         })
     
     @action(detail=False, methods=["get"], url_path="visibility")
+    @transaction.atomic
     def logbook_visibility(self, request):
         try:
             id = request.query_params.get('id',None)
@@ -4682,6 +4708,7 @@ class TeacherViewSet(viewsets.ModelViewSet):
             return Response({"error": str(e)}, status=500)
     
     @action(detail=False, methods=['post'], url_path="sem-register")
+    @transaction.atomic
     def register_teacher_sem(self, request):
         try:
             category = request.data.get("category") 
@@ -4925,15 +4952,15 @@ class TeacherViewSet(viewsets.ModelViewSet):
                         dept = Department.objects.get(name=row["department"])
                         desg = Designation.objects.get(name=row["designation"])
                     except Designation.DoesNotExist:
-                        raise IntegrityError(f"Invalid batch ID: {row['designation']}")  # Forces rollback
+                        raise ValueError(f"Invalid batch ID: {row['designation']}")  # Forces rollback
                     except Department.DoesNotExist:
-                        raise IntegrityError(f"Invalid department: {row['department']}")  # Forces rollback
+                        raise ValueError(f"Invalid department: {row['department']}")  # Forces rollback
 
                     Teacher.objects.create(user=user, role=desg, middle_name=row["middlename"], department=dept)
 
             return Response({"message": "CSV file processed successfully!"}, status=status.HTTP_201_CREATED)
 
-        except IntegrityError as ie:
+        except ValueError as ie:
             return Response({"error": str(ie)}, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
@@ -4974,6 +5001,7 @@ class YearViewSet(viewsets.ReadOnlyModelViewSet):
             data[department.name] = list(years)
         return Response(data)
 
+    @transaction.atomic
     def create(self, request, *args, **kwargs):
         department_name = request.data.get('department_name')
         year_value = request.data.get('year')
@@ -5000,6 +5028,7 @@ class YearViewSet(viewsets.ReadOnlyModelViewSet):
         return Response({"message":"Successfully Saved"}, status=status.HTTP_201_CREATED)
 
     @action(detail=False, methods=['delete'])
+    @transaction.atomic
     def delete_selected(self, request):
         rows_to_delete = request.data.get('ids', [])
 
@@ -5047,6 +5076,7 @@ class SemViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
     
     @action(detail=False, methods=["post"], url_path="add-semester")
+    @transaction.atomic
     def add_semester(self, request):
         data = request.data
 
@@ -5094,6 +5124,7 @@ class SemViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     
     @action(detail=True, methods=['put'], url_path='edit-semester')
+    @transaction.atomic 
     def edit_semester(self, request, pk=None):
         try:
             semester = self.get_object()
@@ -5120,6 +5151,7 @@ class SemViewSet(viewsets.ModelViewSet):
             return Response({"error": str(e)}, status=500)
 
     @action(detail=False, methods=['post'], url_path='delete-semesters')
+    @transaction.atomic
     def delete_semesters(self, request):
         ids_to_delete = request.data.get("ids", [])
         if not ids_to_delete:
@@ -5131,6 +5163,7 @@ class SemViewSet(viewsets.ModelViewSet):
         return Response({"message": "Semesters successfully deleted"}, status=status.HTTP_200_OK)
     
     @action(detail=False, methods=["patch"], url_path="active-teacher-form")
+    @transaction.atomic
     def teacher_form(self, request):
         try: 
             category = request.query_params.get('category', None)
@@ -5168,6 +5201,7 @@ class SemViewSet(viewsets.ModelViewSet):
             return Response({"error": str(e)}, status=500)
     
     @action(detail=False, methods=["patch"], url_path="active-student-form")
+    @transaction.atomic
     def student_form(self, request):
         try: 
             category = request.query_params.get('category', None)
@@ -5712,6 +5746,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             return Response({"error": str(e)}, status=500)
     
     @action(detail=True, methods=['post'])
+    @transaction.atomic
     def update_topic(self, request, pk=None):  # Get pk from URL
         try:
             data = request.data
@@ -6309,6 +6344,7 @@ class ProjectPreferenceViewSet(viewsets.ModelViewSet):
             return Response({"error": str(e)}, status=500)
     
     @action(detail=False, methods=["post"], url_path="delete-project")
+    @transaction.atomic
     def delete_project(self, request):
         try:
             project_ids = request.data.get("project_ids", [])
@@ -6384,6 +6420,7 @@ class PublicationViewSet(viewsets.ModelViewSet):
         return Publication.objects.all()
 
     @action(detail=False, methods=['post'])
+    @transaction.atomic
     def create_or_update(self, request):
         project_id = self.request.query_params.get('project', None)
         if not project_id:
@@ -6424,6 +6461,7 @@ class CopyrightViewSet(viewsets.ModelViewSet):
         return Copyright.objects.all()
     
     @action(detail=False, methods=['post'])
+    @transaction.atomic
     def create_or_update(self, request):
         project_id = self.request.query_params.get('project', None)
         if not project_id:
@@ -6465,6 +6503,7 @@ class PatentViewSet(viewsets.ModelViewSet):
         return Patent.objects.all()
 
     @action(detail=False, methods=['post'])
+    @transaction.atomic
     def create_or_update(self, request):
         project_id = self.request.query_params.get('project', None)
         if not project_id:
@@ -6586,6 +6625,7 @@ class AssessmentEventViewSet(viewsets.ModelViewSet):
         })
 
     @action(detail=True, methods=['post'])
+    @transaction.atomic
     def update_panels(self, request, *args, **kwargs):
         # Get the event object from the URL
         event = self.get_object()
@@ -6929,6 +6969,7 @@ class ProjectTaskViewSet(viewsets.ModelViewSet):
 
     # Custom action to submit task statuses
     @action(detail=False, methods=['post'], url_path='submit-task-status')
+    @transaction.atomic
     def submit_task_status(self, request):
         try:
             project_id = request.data.get('project_id')
@@ -6965,6 +7006,7 @@ class ProjectTaskViewSet(viewsets.ModelViewSet):
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     @action(detail=False, methods=['post'], url_path='submit-logbook')
+    @transaction.atomic
     def submit_logbook(self, request):
         try:
             project_id = request.data.get('project_id')
@@ -7020,6 +7062,7 @@ class StudentProfileViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Student profile not found.'}, status=404)
     
     @action(detail=False, methods=['patch'], url_path='update-profile')
+    @transaction.atomic
     def update_profile(self, request):
         try:
             teacher = Student.objects.get(user=request.user)
@@ -7042,6 +7085,7 @@ class StudentProfileViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Teacher profile not found.'}, status=status.HTTP_404_NOT_FOUND)
     
     @action(detail=False, methods=['post'])
+    @transaction.atomic
     def update_password(self, request):
         user = request.user
         data = request.data
@@ -7071,6 +7115,7 @@ class TeacherProfileViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Teacher profile not found.'}, status=404)
     
     @action(detail=False, methods=['patch'], url_path='update-profile')
+    @transaction.atomic
     def update_profile(self, request):
         try:
             teacher = Teacher.objects.get(user=request.user)
@@ -7095,6 +7140,7 @@ class TeacherProfileViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Teacher profile not found.'}, status=status.HTTP_404_NOT_FOUND)
         
     @action(detail=False, methods=['post'])
+    @transaction.atomic
     def update_password(self, request):
         user = request.user
         data = request.data
@@ -7149,6 +7195,7 @@ class UploadViewSet(viewsets.ModelViewSet):
     parser_classes = (MultiPartParser, FormParser)
 
     @action(detail=False, methods=['post'])
+    @transaction.atomic
     def resource_upload(self, request):
         category = self.request.query_params.get('category', None)
         year = self.request.query_params.get('year', None)
@@ -7261,6 +7308,7 @@ class LinkViewSet(viewsets.ModelViewSet):
     serializer_class = LinkSerializer
 
     @action(detail=False, methods=['post'])
+    @transaction.atomic
     def create_link(self, request):
         category = self.request.query_params.get('category', None)
         year = self.request.query_params.get('year', None)
@@ -7337,6 +7385,7 @@ class LinkUploadViewSet(viewsets.ModelViewSet):
     serializer_class = LinkUploadSerializer
     parser_classes = [MultiPartParser, FormParser]
 
+    @transaction.atomic
     def create(self, request, *args, **kwargs):
         link_id = request.data.get("link")
         project_id = request.data.get("project")
